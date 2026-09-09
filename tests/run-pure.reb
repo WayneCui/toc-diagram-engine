@@ -94,6 +94,18 @@ foreach n lay/nodes [if (n/x + n/w) > max-x [max-x: n/x + n/w]]
 assert-true "cloud canvas fits nodes" lay/width >= max-x
 lay: layout/of doc 'crt
 assert-true "crt has and marks" not empty? lay/and-marks
+foreach k [crt frt] [
+	lay: layout/of doc k
+	foreach m lay/and-marks [
+		n: none
+		foreach node lay/nodes [if node/text = m/effect [n: node]]
+		assert-true rejoin [k " and has effect"] not none? n
+		if n [
+			assert-true rejoin [k " and x under effect"] (absolute n/cx - m/x) < 2.0
+			assert-true rejoin [k " and below effect"] m/y > (n/y + n/h - 1)
+		]
+	]
+]
 
 print rejoin ["^/Result: " pass " passed, " fail " failed"]
 either fail = 0 [quit/return 0] [quit/return 1]

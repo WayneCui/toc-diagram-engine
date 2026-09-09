@@ -157,6 +157,25 @@ layout: context [
 		copy []
 	]
 
+	and-member?: func [
+		tree [map!]
+		from [string!]
+		to [string!]
+		/local g c
+	][
+		foreach g tree/and-groups [
+			if g/effect = to [
+				foreach c g/causes [if c = from [return g]]
+			]
+		]
+		none
+	]
+
+	find-and-mark: func [marks [block!] effect [string!] /local m] [
+		foreach m marks [if m/effect = effect [return m]]
+		none
+	]
+
 	;; --- cloud: A left, B/C middle, D/D' right; arrows point right ---
 
 	of-cloud: func [
@@ -482,7 +501,7 @@ layout: context [
 		/local skip texts layers display nodes edges
 			x y max-h col n e src dst is-trim trimmed
 			and-marks g size row-w max-row gutter
-			cut-node inj-n t
+			cut-node inj-n t m
 	][
 		skip: trim-injections tree
 		texts: collect-texts tree skip
@@ -521,6 +540,10 @@ layout: context [
 			]
 			y: y + max-h + row-gap
 		]
+		and-marks: copy []
+		foreach g tree/and-groups [
+			mark-and nodes and-marks g
+		]
 		edges: copy []
 		trimmed: copy []
 		foreach t tree/trims [
@@ -532,16 +555,34 @@ layout: context [
 				dst: find-node nodes e/to
 				if all [src dst] [
 					is-trim: to-logic find/only trimmed reduce [e/from e/to]
-					either src/y > dst/y [
+					m: none
+					if and-member? tree e/from e/to [
+						m: find-and-mark and-marks e/to
+					]
+					either all [m src/y > m/y] [
 						either is-trim [
-							append/only edges edge/trimmed/assumptions e/from e/to 'cut src/cx src/y dst/cx (dst/y + dst/h) copy e/assumptions
+							append/only edges edge/trimmed/assumptions e/from e/to 'cut src/cx src/y m/x (m/y + m/ry) copy e/assumptions
 						][
-							append/only edges edge/assumptions e/from e/to 'sufficient src/cx src/y dst/cx (dst/y + dst/h) copy e/assumptions
+							append/only edges edge/assumptions e/from e/to 'sufficient src/cx src/y m/x (m/y + m/ry) copy e/assumptions
 						]
 					][
-						append/only edges edge/via e/from e/to 'back src/x src/cy dst/x dst/cy gutter
+						either src/y > dst/y [
+							either is-trim [
+								append/only edges edge/trimmed/assumptions e/from e/to 'cut src/cx src/y dst/cx (dst/y + dst/h) copy e/assumptions
+							][
+								append/only edges edge/assumptions e/from e/to 'sufficient src/cx src/y dst/cx (dst/y + dst/h) copy e/assumptions
+							]
+						][
+							append/only edges edge/via e/from e/to 'back src/x src/cy dst/x dst/cy gutter
+						]
 					]
 				]
+			]
+		]
+		foreach m and-marks [
+			dst: find-node nodes m/effect
+			if dst [
+				append/only edges edge "*" m/effect 'sufficient m/x (m/y - m/ry) dst/cx (dst/y + dst/h)
 			]
 		]
 		;; place trim injections beside the cut
@@ -559,10 +600,6 @@ layout: context [
 				append/only edges edge t/injection t/from 'breaks inj-n/x inj-n/cy ((src/cx + dst/cx) / 2.0) ((src/y + dst/y + dst/h) / 2.0)
 			]
 		]
-		and-marks: copy []
-		foreach g tree/and-groups [
-			mark-and nodes and-marks g
-		]
 		size: canvas nodes
 		make map! reduce [
 			'kind tree/kind
@@ -576,7 +613,7 @@ layout: context [
 		]
 	]
 
-	mark-and: func [nodes [block!] marks [block!] g [map!] /local causes n mx my t effect min-top max-bot] [
+	mark-and: func [nodes [block!] marks [block!] g [map!] /local causes n mx my t effect min-top] [
 		causes: copy []
 		foreach t g/causes [
 			n: find-node nodes t
@@ -584,16 +621,17 @@ layout: context [
 		]
 		if (length? causes) < 2 [exit]
 		effect: find-node nodes g/effect
-		mx: 0.0
-		foreach n causes [mx: mx + n/cx]
-		mx: mx / length? causes
+		;; sit under the effect, not at the x-midpoint of possibly distant causes
 		either effect [
+			mx: effect/cx
 			my: effect/y + effect/h + 16
-			;; keep AND between effect and the highest cause
 			min-top: causes/1/y
 			foreach n causes [if n/y < min-top [min-top: n/y]]
-			if my > (min-top - 8) [my: (effect/y + effect/h + min-top) / 2.0]
+			if my > (min-top - 14) [my: (effect/y + effect/h + min-top) / 2.0]
 		][
+			mx: 0.0
+			foreach n causes [mx: mx + n/cx]
+			mx: mx / length? causes
 			my: causes/1/y - 18
 		]
 		append/only marks make map! reduce [
@@ -601,6 +639,7 @@ layout: context [
 			'y my
 			'rx 20
 			'ry 9
+			'effect g/effect
 		]
 	]
 
