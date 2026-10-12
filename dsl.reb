@@ -51,6 +51,20 @@ dsl: context [
 		out
 	]
 
+	cloud-kind?: func [kind] [
+		to-logic all [kind find to-string kind "cloud"]
+	]
+
+	alloc-kind: func [sections [block!] cur-kind kind /local n s] [
+		unless kind = 'cloud [return kind]
+		n: 0
+		foreach s sections [
+			if cloud-kind? s/1 [n: n + 1]
+		]
+		if cloud-kind? cur-kind [n: n + 1]
+		any [pick [cloud cloud2 cloud3 cloud4] (n + 1) 'cloud4]
+	]
+
 	split-sections: func [
 		text [string!]
 		/local lines line sections cur-kind buf kind
@@ -67,6 +81,7 @@ dsl: context [
 			]
 			kind: select tree-headers line
 			either kind [
+				kind: alloc-kind sections cur-kind kind
 				if cur-kind [
 					append/only sections reduce [cur-kind trim buf]
 				]
@@ -87,7 +102,7 @@ dsl: context [
 
 	split-units: func [
 		body [string!]
-		/local out i ch start n unit
+		/local out i ch start n unit depth
 	][
 		out: copy []
 		body: trim copy body
@@ -95,13 +110,18 @@ dsl: context [
 		start: 1
 		n: length? body
 		i: 1
+		depth: 0
 		while [i <= n] [
 			ch: body/:i
 			;; Oldes r3: char! "=" is unreliable for non-ASCII; use "=="
-			if ch == toc-kw/period [
-				unit: trim copy/part at body start (i - start + 1)
-				if not empty? unit [append out unit]
-				start: i + 1
+			case [
+				ch == toc-kw/quote-open [depth: depth + 1]
+				ch == toc-kw/quote-close [depth: depth - 1]
+				all [depth = 0 ch == toc-kw/period] [
+					unit: trim copy/part at body start (i - start + 1)
+					if not empty? unit [append out unit]
+					start: i + 1
+				]
 			]
 			i: i + 1
 		]
@@ -234,7 +254,10 @@ dsl: context [
 
 		if all [
 			contains? unit toc-kw/conflict
-			contains? unit toc-kw/and-conj
+			any [
+				contains? unit toc-kw/and-conj
+				contains? unit toc-kw/and-conj-alt
+			]
 			2 <= length? qs
 		] [
 			append tree/conflicts make map! reduce [

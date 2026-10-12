@@ -122,11 +122,17 @@ model: context [
 		t
 	]
 
+	cloud-kind?: func [kind [word!]] [
+		to-logic find to-string kind "cloud"
+	]
+
 	allowed-edge: func [kind [word!] edge-kind [word!]] [
 		switch/default kind [
 			crt frt nbr trt [edge-kind = 'sufficient]
 			cloud prt [edge-kind = 'necessary]
-		] [false]
+		] [
+			either cloud-kind? kind [edge-kind = 'necessary] [false]
+		]
 	]
 
 	is-need?: func [pairs [block!] text [string!] /local q] [
@@ -215,12 +221,15 @@ model: context [
 				]
 			]
 		]
-		switch kind [
-			cloud [
-				unless validate-cloud doc tree [
-					add-error doc "cloud: cannot reconstruct A/B/C/D/Dprime from edges+conflict"
+		if cloud-kind? kind [
+			unless validate-cloud doc tree [
+				add-error doc rejoin [
+					"cloud: cannot reconstruct A/B/C/D/Dprime from edges+conflict ("
+					to-string kind ")"
 				]
 			]
+		]
+		switch kind [
 			prt [
 				foreach o tree/obstacles [
 					unless all [o/obstacle o/io] [

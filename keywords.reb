@@ -27,7 +27,8 @@ toc-kw: context [
 	break-assump: to-string #{E68993E7A0B4}
 	trim: to-string #{E589AAE696AD}
 	conflict: to-string #{E586B2E7AA81}
-	and-conj: to-string #{E4B88E}          ; 与
+	and-conj: to-string #{E4B88E}          ; ?
+	and-conj-alt: to-string #{E5928C}      ; ?
 	if-kw: to-string #{E5A682E69E9C}
 	then-kw: to-string #{E982A3E4B988}
 	and-kw: to-string #{E5B9B6E4B894}       ; 并且

@@ -657,6 +657,8 @@ layout: context [
 			crt [of-dag doc tree "Current Reality Tree"]
 			frt [of-dag doc tree "Future Reality Tree"]
 			nbr [of-dag doc tree "Negative Branch"]
-		] [none]
+		] [
+			either find to-string kind "cloud" [of-cloud doc tree] [none]
+		]
 	]
 ]

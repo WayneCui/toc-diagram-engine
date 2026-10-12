@@ -58,6 +58,21 @@ lay: layout/of doc 'crt
 svg: render/svg lay
 assert-true "and mark in svg" to-logic find svg "AND"
 
+print "== period inside quotes =="
+doc: dsl/parse-file %examples/period-in-quote.toc
+assert-true "period-quote no errors" empty? doc/errors
+assert-eq "period-quote ude kept" 1 length? words-of doc/trees/crt/roles
+
+print "== two evaporating clouds =="
+doc: dsl/parse-file %examples/two-clouds.toc
+assert-true "two-clouds no errors" empty? doc/errors
+assert-true "has cloud" not none? select doc/trees 'cloud
+assert-true "has cloud2" not none? select doc/trees 'cloud2
+lay: layout/of doc 'cloud
+assert-true "cloud1 layout" not none? lay
+lay: layout/of doc 'cloud2
+assert-true "cloud2 layout" not none? lay
+
 print "== firefighting six trees =="
 doc: dsl/parse-file %examples/firefighting.toc
 assert-true "ff no errors" empty? doc/errors
